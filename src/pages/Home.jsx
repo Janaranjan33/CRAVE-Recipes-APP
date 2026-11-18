@@ -4,8 +4,8 @@ import RecipeCard from "../components/RecipeCard";
 import Loading from "../components/Loading";
 import EmptyState from "../components/EmptyState";
 import {
-  getAreas, getCategories, getMealsByArea, getMealsByCategory,
-  getMealsByIngredient, getMealsByName, getRandomMeals
+  getAllMeals, getAreas, getCategories, getMealsByArea, getMealsByCategory,
+  getMealsByIngredient, getMealsByName
 } from "../services/recipeApi";
 
 export default function Home() {
@@ -24,12 +24,13 @@ export default function Home() {
     async function loadInitialData() {
       try {
         setError("");
-        const [categoryData, areaData, randomMeals] = await Promise.all([
-          getCategories(), getAreas(), getRandomMeals(12)
+        const [categoryData, areaData] = await Promise.all([
+          getCategories(), getAreas()
         ]);
+        const allMeals = await getAllMeals(categoryData);
         setCategories(categoryData);
         setAreas(areaData);
-        setMeals(randomMeals);
+        setMeals(allMeals);
       } catch {
         setError("We couldn't load recipes. Please check your connection and try again.");
       } finally {
@@ -57,8 +58,8 @@ export default function Home() {
         if (ingredient.trim()) requests.push(getMealsByIngredient(ingredient.trim()));
 
         if (requests.length === 0) {
-          const randomMeals = await getRandomMeals(12);
-          if (active) setMeals(randomMeals);
+          const allMeals = await getAllMeals(categories);
+          if (active) setMeals(allMeals);
         } else {
           const results = await Promise.all(requests);
           const [first, ...rest] = results;
@@ -87,7 +88,7 @@ export default function Home() {
       active = false;
       clearTimeout(timer);
     };
-  }, [search, category, area, ingredient]);
+  }, [search, category, area, ingredient, categories]);
 
   const activeFilters = useMemo(
     () => [category, area, ingredient].filter(Boolean).length,

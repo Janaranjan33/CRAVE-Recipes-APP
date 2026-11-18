@@ -37,17 +37,17 @@ export async function getMealsByIngredient(ingredient) {
   return data.meals || [];
 }
 
+// TheMealDB does not expose a single endpoint for its full recipe catalogue.
+// Fetch each category and combine the results by meal ID instead.
+export async function getAllMeals(categories) {
+  const results = await Promise.all(
+    categories.map((category) => getMealsByCategory(category.strCategory))
+  );
+  return [...new Map(results.flat().map((meal) => [meal.idMeal, meal])).values()];
+}
+
 export async function getMealById(id) {
   const { data } = await api.get("/lookup.php", { params: { i: id } });
   return data.meals?.[0] || null;
 }
 
-export async function getRandomMeals(count = 12) {
-  const requests = Array.from({ length: count }, () => api.get("/random.php"));
-  const results = await Promise.allSettled(requests);
-  const meals = results
-    .filter((result) => result.status === "fulfilled")
-    .map((result) => result.value.data.meals?.[0])
-    .filter(Boolean);
-  return [...new Map(meals.map((meal) => [meal.idMeal, meal])).values()];
-}
