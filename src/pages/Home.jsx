@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Search, SlidersHorizontal, X, Sparkles } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import RecipeCard from "../components/RecipeCard";
 import Loading from "../components/Loading";
 import EmptyState from "../components/EmptyState";
@@ -109,9 +109,6 @@ export default function Home() {
         <div className="absolute -bottom-28 left-0 h-72 w-72 rounded-full bg-green-100/60 blur-3xl" />
         <div className="relative mx-auto grid max-w-7xl items-center gap-10 px-5 py-16 md:grid-cols-[1.05fr_.95fr] md:py-24 lg:px-8">
           <div>
-            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-orange-200 bg-white/80 px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-tomato">
-              <Sparkles size={14} /> Your daily dose of delicious
-            </div>
             <h1 className="max-w-2xl font-display text-5xl font-bold leading-[1.08] tracking-tight sm:text-6xl lg:text-7xl">
               Find your next <span className="italic text-tomato">favourite</span> meal.
             </h1>
