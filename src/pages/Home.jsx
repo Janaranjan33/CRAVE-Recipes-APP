@@ -8,6 +8,8 @@ import {
   getMealsByIngredient, getMealsByName
 } from "../services/recipeApi";
 
+const HOME_RECIPE_LIMIT = 50;
+
 export default function Home() {
   const [meals, setMeals] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -30,7 +32,7 @@ export default function Home() {
         const allMeals = await getAllMeals(categoryData);
         setCategories(categoryData);
         setAreas(areaData);
-        setMeals(allMeals);
+        setMeals(allMeals.slice(0, HOME_RECIPE_LIMIT));
       } catch {
         setError("We couldn't load recipes. Please check your connection and try again.");
       } finally {
@@ -59,7 +61,7 @@ export default function Home() {
 
         if (requests.length === 0) {
           const allMeals = await getAllMeals(categories);
-          if (active) setMeals(allMeals);
+          if (active) setMeals(allMeals.slice(0, HOME_RECIPE_LIMIT));
         } else {
           const results = await Promise.all(requests);
           const [first, ...rest] = results;
@@ -71,7 +73,7 @@ export default function Home() {
 
           // Filter endpoints return summary objects. Search endpoint may contain full meal details.
           // Keep the first result's order and hydrate selected cards only when required.
-          const hydrated = await Promise.all(matchingMeals.slice(0, 24).map(async (meal) => {
+          const hydrated = await Promise.all(matchingMeals.map(async (meal) => {
             if (meal.strCategory || meal.strInstructions) return meal;
             return meal;
           }));
