@@ -3,6 +3,7 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import RecipeCard from "../components/RecipeCard";
 import Loading from "../components/Loading";
 import EmptyState from "../components/EmptyState";
+import { useFavorites } from "../context/FavoritesContext";
 import {
   getAllMeals, getAreas, getCategories, getMealsByArea, getMealsByCategory,
   getMealsByIngredient, getMealsByName
@@ -12,15 +13,18 @@ const HOME_RECIPE_LIMIT = 50;
 
 export default function Home() {
   const [meals, setMeals] = useState([]);
+  const [totalRecipeCount, setTotalRecipeCount] = useState(0);
   const [categories, setCategories] = useState([]);
   const [areas, setAreas] = useState([]);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [area, setArea] = useState("");
   const [ingredient, setIngredient] = useState("");
+  const [sortBy, setSortBy] = useState("most-favorite");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const didInitialLoad = useRef(false);
+  const { favorites } = useFavorites();
 
   useEffect(() => {
     async function loadInitialData() {
@@ -30,9 +34,10 @@ export default function Home() {
           getCategories(), getAreas()
         ]);
         const allMeals = await getAllMeals(categoryData);
+        setTotalRecipeCount(allMeals.length);
         setCategories(categoryData);
         setAreas(areaData);
-        setMeals(allMeals.slice(0, HOME_RECIPE_LIMIT));
+        setMeals(allMeals);
       } catch {
         setError("We couldn't load recipes. Please check your connection and try again.");
       } finally {
@@ -61,7 +66,8 @@ export default function Home() {
 
         if (requests.length === 0) {
           const allMeals = await getAllMeals(categories);
-          if (active) setMeals(allMeals.slice(0, HOME_RECIPE_LIMIT));
+          if (active) setTotalRecipeCount(allMeals.length);
+          if (active) setMeals(allMeals);
         } else {
           const results = await Promise.all(requests);
           const [first, ...rest] = results;
@@ -96,6 +102,17 @@ export default function Home() {
     () => [category, area, ingredient].filter(Boolean).length,
     [category, area, ingredient]
   );
+
+  const visibleMeals = useMemo(() => {
+    const isDefaultView = !search.trim() && !category && !area && !ingredient.trim();
+    const sortedMeals = sortBy === "most-favorite"
+      ? [...meals].sort((first, second) => {
+        const favoriteIds = new Set(favorites.map((meal) => meal.idMeal));
+        return Number(favoriteIds.has(second.idMeal)) - Number(favoriteIds.has(first.idMeal));
+      })
+      : meals;
+    return isDefaultView ? sortedMeals.slice(0, HOME_RECIPE_LIMIT) : sortedMeals;
+  }, [meals, favorites, sortBy, search, category, area, ingredient]);
 
   function clearFilters() {
     setSearch("");
@@ -136,7 +153,9 @@ export default function Home() {
             <h2 className="font-display text-3xl font-bold sm:text-4xl">What are you craving?</h2>
             <p className="mt-2 text-sm text-stone-500">Search, mix filters and find your next favourite.</p>
           </div>
-          <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-stone-600 shadow-sm">{meals.length} recipes</span>
+          <span className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-stone-600 shadow-sm">
+            {visibleMeals.length} shown out of {totalRecipeCount} total recipes
+          </span>
         </div>
 
         <div className="rounded-3xl border border-stone-200/80 bg-white p-4 shadow-sm sm:p-5">
@@ -145,7 +164,7 @@ export default function Home() {
             <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search by recipe name, e.g. Arrabiata..." className="w-full rounded-2xl border border-stone-200 bg-cream py-4 pl-12 pr-12 text-sm outline-none transition focus:border-tomato" />
             {search && <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-ink" aria-label="Clear search"><X size={18} /></button>}
           </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <label className="block">
               <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-500">Category</span>
               <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-xl border border-stone-200 bg-white px-3 py-3 text-sm outline-none focus:border-tomato">
@@ -164,6 +183,13 @@ export default function Home() {
               <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-500">Ingredient</span>
               <input value={ingredient} onChange={(e) => setIngredient(e.target.value)} placeholder="e.g. chicken_breast" className="w-full rounded-xl border border-stone-200 px-3 py-3 text-sm outline-none focus:border-tomato" />
             </label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-bold uppercase tracking-wider text-stone-500">Sort recipes</span>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="w-full rounded-xl border border-stone-200 bg-white px-3 py-3 text-sm outline-none focus:border-tomato">
+                <option value="most-favorite">Most favorite</option>
+                <option value="default">Recommended</option>
+              </select>
+            </label>
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
             <span className="flex items-center gap-2 text-xs text-stone-500"><SlidersHorizontal size={14} /> {activeFilters} active filter{activeFilters === 1 ? "" : "s"}</span>
@@ -180,9 +206,9 @@ export default function Home() {
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700">
             {error} <button onClick={() => window.location.reload()} className="ml-2 font-bold underline">Reload</button>
           </div>
-        ) : loading ? <Loading /> : meals.length ? (
+        ) : loading ? <Loading /> : visibleMeals.length ? (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {meals.map((meal) => <RecipeCard key={meal.idMeal} meal={meal} categoryLabel={meal.strCategory || category || meal.strArea || area || "Discover"} />)}
+            {visibleMeals.map((meal) => <RecipeCard key={meal.idMeal} meal={meal} categoryLabel={meal.strCategory || category || meal.strArea || area || "Discover"} />)}
           </div>
         ) : <EmptyState />}
       </section>
